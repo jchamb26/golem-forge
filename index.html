@@ -22,7 +22,7 @@
   .card { background:linear-gradient(145deg,rgba(37,47,59,.97),rgba(25,31,40,.97)); border:1px solid #3b4858; border-radius:18px; padding:18px; box-shadow:0 12px 35px #0003; }
   .card h2 { margin:0 0 12px; font-size:1.2rem; }
   .hero { display:flex; gap:16px; align-items:center; }
-  .avatar { display:grid; place-items:center; width:118px; height:118px; flex:0 0 118px; border-radius:18px; background:radial-gradient(circle,#455568,#202a35); border:1px solid #657386; font-size:4.5rem; }
+  .avatar { display:grid; place-items:center; width:118px; height:118px; flex:0 0 118px; border-radius:18px; overflow:hidden; background:radial-gradient(circle,#455568,#202a35); border:1px solid #657386; font-size:4.5rem; } .golem-art { padding:3px; } .golem-art svg { width:100%; height:100%; display:block; }
   .name { font-size:1.5rem; font-weight:850; line-height:1.1; margin-bottom:7px; }
   .tags { display:flex; gap:6px; flex-wrap:wrap; margin:7px 0; }
   .tag { border:1px solid #607084; color:#dce5ef; border-radius:99px; padding:3px 8px; font-size:.76rem; }
@@ -153,11 +153,59 @@ function generateGolem(){
 }
 function cloneGolem(g){return JSON.parse(JSON.stringify(g));}
 function statBar(label,value,max,color){return `<div><div class="stat-top"><span>${label}</span><strong>${value}</strong></div><div class="bar"><div class="fill" style="width:${Math.min(100,value/max*100)}%;background:${color}"></div></div></div>`;}
+
+function golemArt(g){
+ const palette = {
+  Granite:{main:"#8d969f",dark:"#505a65",light:"#c7cdd2",glow:"#8ee7ff"},
+  Iron:{main:"#687889",dark:"#303b48",light:"#b5c6d6",glow:"#8ee7ff"},
+  Crystal:{main:"#80c8e8",dark:"#376b9a",light:"#e0fbff",glow:"#b5f7ff"},
+  Clay:{main:"#bd805c",dark:"#754733",light:"#e6b58b",glow:"#ffd78e"},
+  Heartwood:{main:"#7caa6c",dark:"#355d43",light:"#c1db8a",glow:"#a8ff9d"},
+  Bone:{main:"#d9d0b9",dark:"#776e61",light:"#fff4d8",glow:"#d4b6ff"},
+  Magma:{main:"#b74e35",dark:"#542d35",light:"#ff9a46",glow:"#ffe76b"}
+ };
+ const p=palette[g.material.name]||palette.Granite;
+ const coreColors={"Earth Core":"#b58b56","Storm Core":"#82e8ff","Sun Core":"#ffb63e","Moon Core":"#b7a1ff","Void Core":"#e27aff"};
+ const glow=coreColors[g.core.name]||p.glow;
+ const seed=[...g.name].reduce((a,c)=>a+c.charCodeAt(0),0);
+ const eyeY=35+(seed%4), horn=(seed%3), rune=seed%2;
+ let body = "";
+ if(g.material.name==="Crystal"){
+   body = `<path d="M34 52 L43 30 L57 24 L72 32 L80 53 L71 73 L44 73 Z" fill="${p.main}" stroke="${p.light}" stroke-width="2"/><path d="M44 31 L54 48 L43 67 M72 33 L61 48 L71 67 M54 48 L61 48 L62 70" fill="none" stroke="${p.light}" stroke-width="2"/>`;
+ } else if(g.material.name==="Heartwood"){
+   body = `<path d="M40 52 Q29 38 42 28 Q53 17 63 30 Q77 22 80 40 L73 67 Q61 78 43 68 Z" fill="${p.main}" stroke="${p.dark}" stroke-width="3"/><path d="M48 34 Q57 44 48 60 M65 32 Q56 47 68 61 M45 53 Q58 47 71 53" fill="none" stroke="${p.light}" stroke-width="3" stroke-linecap="round"/>`;
+ } else if(g.material.name==="Bone"){
+   body = `<path d="M42 31 Q35 23 42 19 Q48 15 53 22 L62 22 Q69 15 75 20 Q81 26 73 32 L72 52 L67 62 L66 71 L58 71 L55 59 L49 71 L41 69 L45 54 Z" fill="${p.main}" stroke="${p.dark}" stroke-width="3"/><path d="M44 38 L70 38 M46 47 L68 47 M49 56 L65 56" stroke="${p.dark}" stroke-width="3"/>`;
+ } else if(g.material.name==="Magma"){
+   body = `<path d="M38 51 L43 30 L54 25 L69 31 L78 53 L70 70 L44 70 Z" fill="${p.main}" stroke="${p.dark}" stroke-width="3"/><path d="M48 30 L53 42 L47 52 L54 68 M68 32 L62 45 L70 54 L64 69" fill="none" stroke="${p.light}" stroke-width="3" stroke-linecap="round"/>`;
+ } else {
+   body = `<path d="M39 52 L42 30 L53 24 L68 28 L78 49 L72 70 L43 70 Z" fill="${p.main}" stroke="${p.dark}" stroke-width="3"/><path d="M46 34 L53 43 L47 50 M68 32 L62 43 L70 51" fill="none" stroke="${p.light}" stroke-width="2"/>`;
+ }
+ const horns = horn===0 ? "" : horn===1
+   ? `<path d="M43 28 L36 15 L48 23 M69 28 L78 14 L75 27" fill="${p.light}" stroke="${p.dark}" stroke-width="2"/>`
+   : `<path d="M45 27 L43 12 L53 23 M67 27 L72 12 L74 27" fill="${p.light}" stroke="${p.dark}" stroke-width="2"/>`;
+ return `<svg viewBox="0 0 120 120" role="img" aria-label="${g.name}, a ${g.material.name.toLowerCase()} golem">
+ <defs><radialGradient id="aura${seed}"><stop offset="0" stop-color="${glow}" stop-opacity=".6"/><stop offset="1" stop-color="${glow}" stop-opacity="0"/></radialGradient></defs>
+ <circle cx="60" cy="51" r="48" fill="url(#aura${seed})"/>
+ <ellipse cx="60" cy="105" rx="34" ry="6" fill="#0a1017" opacity=".65"/>
+ <path d="M44 69 L39 91 L32 99 L43 102 L52 91 L56 72 M67 72 L72 91 L82 99 L72 103 L62 92 L59 72" fill="${p.dark}" stroke="${p.dark}" stroke-width="4" stroke-linejoin="round"/>
+ <path d="M39 48 L25 58 L22 75 L30 77 L38 64 M76 48 L91 57 L96 73 L88 77 L79 64" fill="${p.main}" stroke="${p.dark}" stroke-width="5" stroke-linejoin="round"/>
+ ${body}
+ ${horns}
+ <path d="M46 ${eyeY} L53 ${eyeY} M64 ${eyeY} L71 ${eyeY}" stroke="${glow}" stroke-width="5" stroke-linecap="round" filter="drop-shadow(0 0 3px ${glow})"/>
+ <path d="M53 58 Q60 62 67 58" fill="none" stroke="${p.dark}" stroke-width="3" stroke-linecap="round"/>
+ <circle cx="60" cy="48" r="6" fill="${glow}" opacity=".92"/>
+ <path d="M60 41 L63 47 L60 53 L57 47 Z" fill="#fff" opacity=".9"/>
+ ${rune?`<path d="M60 76 L64 83 L60 89 L56 83 Z" fill="${glow}" stroke="${p.light}" stroke-width="1"/>`:""}
+ <path d="M28 109 Q60 114 92 109" fill="none" stroke="${glow}" stroke-opacity=".55" stroke-width="2"/>
+ </svg>`;
+}
+
 function renderGolem(g,target,isPlayer){
  if(!g){$(target).innerHTML='<p class="muted">No golem forged yet.</p>';return;}
  const s=g.stats, hp=Math.max(0,g.hp);
  $(target).innerHTML=`
-  <div class="hero"><div class="avatar">${g.material.icon}</div><div>
+  <div class="hero"><div class="avatar golem-art">${golemArt(g)}</div><div>
    <div class="name">${g.name}</div><div class="tags"><span class="tag rarity" style="color:${g.rarity.color};border-color:${g.rarity.color}">${g.rarity.name}</span><span class="tag">${g.material.name}</span><span class="tag">${g.core.name}</span></div>
    <div class="muted">${g.desc}</div><div class="muted">Temperament: <b>${g.temper.name}</b></div>
   </div></div>
