@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golem Forge — Playable Golem Generator</title>
+<style>
+  :root { --bg:#11151b; --panel:#1c232d; --panel2:#252f3b; --text:#eef2f6; --muted:#aab6c4; --gold:#e9b85b; --green:#72d6a0; --red:#ff7777; --blue:#78bfff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(ellipse at top,#283341 0,#11151b 55%); color:var(--text); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; }
+  .wrap { max-width:1120px; margin:auto; padding:24px 16px 44px; }
+  header { text-align:center; margin-bottom:22px; }
+  .eyebrow { color:var(--gold); text-transform:uppercase; letter-spacing:.2em; font-size:.75rem; font-weight:800; }
+  h1 { margin:5px 0; font-size:clamp(2rem,6vw,3.4rem); letter-spacing:.04em; }
+  .sub { color:var(--muted); max-width:660px; margin:0 auto; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:22px 0; }
+  button, select { font:inherit; border:1px solid #536172; border-radius:10px; padding:11px 15px; background:var(--panel2); color:var(--text); cursor:pointer; }
+  button:hover { filter:brightness(1.13); transform:translateY(-1px); }
+  button.primary { background:var(--gold); color:#241a08; border-color:var(--gold); font-weight:800; }
+  button:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+  .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; align-items:start; }
+  .card { background:linear-gradient(145deg,rgba(37,47,59,.97),rgba(25,31,40,.97)); border:1px solid #3b4858; border-radius:18px; padding:18px; box-shadow:0 12px 35px #0003; }
+  .card h2 { margin:0 0 12px; font-size:1.2rem; }
+  .hero { display:flex; gap:16px; align-items:center; }
+  .avatar { display:grid; place-items:center; width:118px; height:118px; flex:0 0 118px; border-radius:18px; background:radial-gradient(circle,#455568,#202a35); border:1px solid #657386; font-size:4.5rem; }
+  .name { font-size:1.5rem; font-weight:850; line-height:1.1; margin-bottom:7px; }
+  .tags { display:flex; gap:6px; flex-wrap:wrap; margin:7px 0; }
+  .tag { border:1px solid #607084; color:#dce5ef; border-radius:99px; padding:3px 8px; font-size:.76rem; }
+  .tag.rarity { color:var(--gold); border-color:#a7833c; font-weight:800; }
+  .muted { color:var(--muted); }
+  .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 16px; margin-top:17px; }
+  .stat-top { display:flex; justify-content:space-between; font-size:.9rem; margin-bottom:4px; }
+  .bar { height:8px; background:#111820; border-radius:20px; overflow:hidden; border:1px solid #34404e; }
+  .fill { height:100%; width:50%; background:var(--blue); border-radius:20px; transition:width .3s; }
+  .ability { background:#131a22; border:1px solid #374453; border-radius:12px; padding:11px 12px; margin:8px 0; }
+  .ability strong { color:var(--gold); }
+  .ability small { display:block; color:var(--muted); margin-top:3px; }
+  .weakness { color:#ffaaaa; }
+  .battle-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .healthrow { margin:10px 0 15px; }
+  .healthrow .bar { height:12px; }
+  .healthrow .fill { background:var(--green); }
+  .healthrow.enemy .fill { background:var(--red); }
+  .battle-buttons { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+  .battle-buttons button { flex:1 1 130px; }
+  .log { height:180px; overflow:auto; background:#0c1117; border:1px solid #33404d; border-radius:12px; padding:12px; font-size:.9rem; }
+  .log p { margin:0 0 7px; }
+  .log p:last-child { color:#fff; }
+  .full { grid-column:1/-1; }
+  .footer { text-align:center; color:var(--muted); font-size:.82rem; margin-top:18px; }
+  .notice { border-left:3px solid var(--gold); padding:8px 12px; background:#30291b; color:#f5dfb2; border-radius:0 8px 8px 0; font-size:.9rem; margin-top:12px; }
+  @media (max-width:760px) { .grid { grid-template-columns:1fr; } .full { grid-column:auto; } .hero { align-items:flex-start; } .avatar { width:90px;height:90px;flex-basis:90px;font-size:3.5rem; } .stats { gap:10px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">A Construct-Creation Game</div>
+    <h1>⚒ GOLEM FORGE</h1>
+    <p class="sub">Create strange magical constructs, discover their strengths and weaknesses, then take them into turn-based battles.</p>
+  </header>
+  <div class="toolbar">
+    <button class="primary" id="generateBtn">✦ Forge a New Golem</button>
+    <button id="enemyBtn">☠ Generate New Rival</button>
+    <button id="saveBtn">Save Current Golem</button>
+    <button id="loadBtn">Load Saved Golem</button>
+  </div>
+  <div class="grid">
+    <section class="card" id="playerCard">
+      <h2>🛠 Your Golem</h2>
+      <div id="playerView"></div>
+    </section>
+    <section class="card" id="enemyCard">
+      <h2>⚔ Rival Construct</h2>
+      <div id="enemyView"></div>
+    </section>
+    <section class="card">
+      <div class="battle-head"><h2>🏟 The Arena</h2><span class="tag" id="battleState">Ready to battle</span></div>
+      <div id="battleInfo"></div>
+      <div class="battle-buttons" id="battleButtons"></div>
+      <div class="log" id="battleLog" aria-live="polite"><p>The forge is warm. Generate your golem, then choose an action to begin.</p></div>
+      <div class="notice">Combat tip: heavy attacks hit hard but can miss. Guarding reduces the next hit. Elemental skills use energy.</div>
+    </section>
+    <section class="card">
+      <h2>📜 Forge Notes</h2>
+      <p class="muted">Every golem is assembled from a material, a core, a temperament, and a randomly selected talent. Rarity adds a stat bonus.</p>
+      <div id="loreBox"></div>
+      <h3>🏆 Progress</h3>
+      <div id="progress"></div>
+      <button id="healBtn" style="margin-top:10px;width:100%">Rest & Repair (free, outside combat)</button>
+    </section>
+    <section class="card full">
+      <h2>📚 Your Collection</h2>
+      <p class="muted">Saved golems stay in this browser on this device.</p>
+      <div id="collection" class="tags"><span class="muted">No golems saved yet.</span></div>
+    </section>
+  </div>
+  <div class="footer">Golem Forge prototype · Single-file browser game · Progress saves locally</div>
+</div>
+<script>
+const materials = [
+ {name:"Granite", icon:"🪨", hp:28, str:12, def:16, spd:4, mag:5, resist:"physical", weak:"water", desc:"A stubborn wall of ancient stone."},
+ {name:"Iron", icon:"⚙️", hp:20, str:15, def:19, spd:3, mag:4, resist:"physical", weak:"lightning", desc:"A plated sentinel that barely yields."},
+ {name:"Crystal", icon:"💎", hp:8, str:8, def:8, spd:10, mag:19, resist:"magic", weak:"physical", desc:"A singing lattice of enchanted prisms."},
+ {name:"Clay", icon:"🏺", hp:18, str:9, def:10, spd:7, mag:12, resist:"magic", weak:"fire", desc:"Softly shaped, surprisingly adaptable."},
+ {name:"Heartwood", icon:"🌳", hp:16, str:10, def:9, spd:12, mag:9, resist:"nature", weak:"fire", desc:"A walking knot of living roots."},
+ {name:"Bone", icon:"💀", hp:6, str:13, def:6, spd:15, mag:11, resist:"shadow", weak:"blunt", desc:"A rattling frame bound by old magic."},
+ {name:"Magma", icon:"🌋", hp:15, str:18, def:9, spd:6, mag:13, resist:"fire", weak:"water", desc:"A furnace given limbs and purpose."}
+];
+const cores = [
+ {name:"Earth Core", type:"earth", icon:"🟤", bonus:{hp:12,def:4}, skill:"Quake", skillDesc:"Cracks the arena for heavy damage."},
+ {name:"Storm Core", type:"lightning", icon:"⚡", bonus:{spd:5,mag:7}, skill:"Chain Spark", skillDesc:"Lightning lashes the rival."},
+ {name:"Sun Core", type:"fire", icon:"☀️", bonus:{str:5,mag:5}, skill:"Solar Flare", skillDesc:"A blast of searing light."},
+ {name:"Moon Core", type:"arcane", icon:"🌙", bonus:{hp:5,mag:10}, skill:"Moon Mend", skillDesc:"Restores health and energy."},
+ {name:"Void Core", type:"shadow", icon:"🕳️", bonus:{str:4,spd:4,mag:6}, skill:"Void Pulse", skillDesc:"Drains energy while dealing damage."}
+];
+const temperaments = [
+ {name:"Patient", bonus:{def:4,mag:2}, behavior:"waits for an opening"},
+ {name:"Fierce", bonus:{str:5,hp:-3}, behavior:"presses the attack relentlessly"},
+ {name:"Nimble", bonus:{spd:5,def:-2}, behavior:"dances around danger"},
+ {name:"Ancient", bonus:{hp:12,spd:-2}, behavior:"endures like a forgotten monument"},
+ {name:"Wild", bonus:{str:3,spd:3}, behavior:"fights with unpredictable fury"},
+ {name:"Keen-minded", bonus:{mag:5,def:2}, behavior:"studies every weakness"}
+];
+const talents = [
+ {name:"Regenerator", desc:"Restores 5 HP at the start of each turn.", effect:"regen"},
+ {name:"Bulwark", desc:"Takes 15% less damage.", effect:"bulwark"},
+ {name:"Overcharger", desc:"Special skills deal 20% more damage.", effect:"overcharge"},
+ {name:"Quickstep", desc:"Has a higher chance to dodge heavy attacks.", effect:"dodge"},
+ {name:"Soulbound", desc:"Starts each battle with extra energy.", effect:"soul"},
+ {name:"Breaker", desc:"Heavy attacks deal 25% more damage.", effect:"breaker"}
+];
+const rarities = [
+ {name:"Common", weight:42, mult:1, color:"#c4ced8"},
+ {name:"Uncommon", weight:27, mult:1.06, color:"#72d6a0"},
+ {name:"Rare", weight:16, mult:1.13, color:"#78bfff"},
+ {name:"Epic", weight:9, mult:1.22, color:"#c19aff"},
+ {name:"Legendary", weight:5, mult:1.34, color:"#e9b85b"},
+ {name:"Mythical", weight:1, mult:1.5, color:"#ff8ed4"}
+];
+const namesA = ["Moss","Ash","Rune","Iron","Gloom","Amber","Thorn","Frost","Ember","Obsidian","Cinder","Star","Briar","Gravel","Dawn","Dusk","Copper","Quartz","Hollow","Storm"];
+const namesB = ["warden","mauler","keeper","colossus","sentinel","weaver","breaker","watcher","titan","boundling","guardian","reaver","oracle","stalker","bulwark"];
+let player, enemy, battleOver = false, defending = false, wins = 0, losses = 0, xp = 0, level = 1, collection = [];
+const $ = id => document.getElementById(id);
+const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+const rollRarity = () => { let n=Math.random()*100; for(const r of rarities){n-=r.weight;if(n<=0)return r;} return rarities[0]; };
+function generateGolem(){
+ const m=rand(materials), c=rand(cores), t=rand(temperaments), talent=rand(talents), r=rollRarity();
+ let base={hp:65+m.hp+(c.bonus.hp||0)+(t.bonus.hp||0),str:10+m.str+(c.bonus.str||0)+(t.bonus.str||0),def:8+m.def+(c.bonus.def||0)+(t.bonus.def||0),spd:8+m.spd+(c.bonus.spd||0)+(t.bonus.spd||0),mag:6+m.mag+(c.bonus.mag||0)+(t.bonus.mag||0)};
+ Object.keys(base).forEach(k=>base[k]=Math.max(1,Math.round(base[k]*r.mult)));
+ const name=rand(namesA)+" "+rand(namesB);
+ return {name,material:m,core:c,temper:t,talent,rarity:r,desc:m.desc,stats:base,maxHp:base.hp,hp:base.hp,energy:100,maxEnergy:100,level, xp:0, guarding:false, alive:true};
+}
+function cloneGolem(g){return JSON.parse(JSON.stringify(g));}
+function statBar(label,value,max,color){return `<div><div class="stat-top"><span>${label}</span><strong>${value}</strong></div><div class="bar"><div class="fill" style="width:${Math.min(100,value/max*100)}%;background:${color}"></div></div></div>`;}
+function renderGolem(g,target,isPlayer){
+ if(!g){$(target).innerHTML='<p class="muted">No golem forged yet.</p>';return;}
+ const s=g.stats, hp=Math.max(0,g.hp);
+ $(target).innerHTML=`
+  <div class="hero"><div class="avatar">${g.material.icon}</div><div>
+   <div class="name">${g.name}</div><div class="tags"><span class="tag rarity" style="color:${g.rarity.color};border-color:${g.rarity.color}">${g.rarity.name}</span><span class="tag">${g.material.name}</span><span class="tag">${g.core.name}</span></div>
+   <div class="muted">${g.desc}</div><div class="muted">Temperament: <b>${g.temper.name}</b></div>
+  </div></div>
+  <div class="stats">
+   ${statBar("❤️ Health",hp,s.hp,"#72d6a0")}
+   ${statBar("⚔ Strength",s.str,45,"#ff9b75")}
+   ${statBar("🛡 Defense",s.def,45,"#78bfff")}
+   ${statBar("💨 Speed",s.spd,40,"#c19aff")}
+   ${statBar("✨ Magic",s.mag,40,"#e9b85b")}
+   ${statBar("🔋 Energy",g.energy,100,"#78bfff")}
+  </div>
+  <div class="ability"><strong>Talent: ${g.talent.name}</strong><small>${g.talent.desc}</small></div>
+  <div class="ability"><strong>${g.core.icon} ${g.core.skill}</strong><small>${g.core.skillDesc} Costs 30 energy.</small></div>
+  <div class="ability"><strong>Resists: ${g.material.resist}</strong><small class="weakness">Weakness: ${g.material.weak}</small></div>
+  ${isPlayer?`<p class="muted">Level ${g.level} · XP ${g.xp||0}/${g.level*50}</p>`:""}`;
+}
+function renderAll(){renderGolem(player,"playerView",true);renderGolem(enemy,"enemyView",false);renderProgress();renderCollection();renderBattleInfo();}
+function renderProgress(){$("progress").innerHTML=`<p>Level <b>${level}</b> · XP <b>${xp}</b></p><p>Victories <b>${wins}</b> · Defeats <b>${losses}</b></p><div class="bar"><div class="fill" style="width:${Math.min(100,xp/(level*50)*100)}%;background:var(--gold)"></div></div>`;}
+function renderCollection(){
+ if(!collection.length){$("collection").innerHTML='<span class="muted">No golems saved yet.</span>';return;}
+ $("collection").innerHTML=collection.map((g,i)=>`<button onclick="loadFromCollection(${i})">${g.material.icon} ${g.name} · ${g.rarity.name}</button>`).join("");
+}
+function renderBattleInfo(){
+ if(!player||!enemy){$("battleInfo").innerHTML='<p class="muted">Forge a golem to begin.</p>';return;}
+ $("battleInfo").innerHTML=`<div class="healthrow"><div class="stat-top"><span>${player.name}</span><strong>${Math.max(0,player.hp)} / ${player.maxHp} HP</strong></div><div class="bar"><div class="fill" style="width:${Math.max(0,player.hp)/player.maxHp*100}%"></div></div></div>
+ <div class="healthrow enemy"><div class="stat-top"><span>${enemy.name}</span><strong>${Math.max(0,enemy.hp)} / ${enemy.maxHp} HP</strong></div><div class="bar"><div class="fill" style="width:${Math.max(0,enemy.hp)/enemy.maxHp*100}%"></div></div></div>`;
+ $("battleState").textContent=battleOver?"Battle ended":"Your turn";
+ ["Attack","Heavy Strike","Core Skill","Guard"].forEach((a,i)=>{let b=$("battleButtons").children[i];if(!b){b=document.createElement("button");$("battleButtons").appendChild(b);}b.textContent=["⚔ Attack","💥 Heavy Strike","✨ Core Skill","🛡 Guard"][i];b.disabled=battleOver||!player||!enemy||(i===2&&player.energy<30);b.onclick=()=>act(i);});
+}
+function log(msg){const p=document.createElement("p");p.textContent=msg;$("battleLog").appendChild(p);$("battleLog").scrollTop=$("battleLog").scrollHeight;}
+function resetLog(msg){$("battleLog").innerHTML="";log(msg);}
+function startNewBattle(){
+ if(!player) player=generateGolem();
+ enemy=generateGolem(); enemy.level=Math.max(1,level+Math.floor(Math.random()*3)-1);
+ enemy.stats.hp=Math.round(enemy.stats.hp*(1+(enemy.level-1)*.06));enemy.maxHp=enemy.stats.hp;enemy.hp=enemy.maxHp;
+ enemy.stats.str+=Math.max(0,enemy.level-1)*2;enemy.stats.def+=Math.max(0,enemy.level-1);
+ battleOver=false;defending=false;player.hp=player.maxHp;player.energy=player.maxEnergy;player.guarding=false;enemy.guarding=false;enemy.energy=100;
+ resetLog(`${enemy.name} stomps into the arena! ${enemy.temper.name} ${enemy.material.name} meets your construct.`);
+ renderAll();
+}
+function damageAgainst(attacker, defender, amount, kind){
+ let d=amount;
+ if(defender.material.resist===kind || (defender.material.resist==="physical"&&kind==="physical") || (defender.material.resist==="magic"&&kind==="magic")) d*=.75;
+ if(defender.material.weak===kind || (defender.material.weak==="blunt"&&kind==="heavy") || (defender.material.weak==="physical"&&kind==="physical")) d*=1.25;
+ if(defender.talent.effect==="bulwark")d*=.85;
+ if(defender.guarding)d*=.5;
+ return Math.max(1,Math.round(d));
+}
+function act(type){
+ if(battleOver)return;
+ if(player.talent.effect==="regen")player.hp=Math.min(player.maxHp,player.hp+5);
+ player.guarding=false;
+ if(type===0){
+   let d=damageAgainst(player,enemy,player.stats.str+Math.floor(Math.random()*7),"physical");
+   enemy.hp=Math.max(0,enemy.hp-d);log(`${player.name} attacks for ${d} damage.`);
+ } else if(type===1){
+   if(player.talent.effect==="dodge"&&Math.random()<.18){log(`${player.name} feints before a heavy strike.`);}
+   let hit=Math.random()<(player.talent.effect==="dodge"?.78:.68);
+   if(hit){let mult=player.talent.effect==="breaker"?1.65:1.35;let d=damageAgainst(player,enemy,Math.round(player.stats.str*mult+Math.random()*5),"heavy");enemy.hp=Math.max(0,enemy.hp-d);log(`${player.name} lands a Heavy Strike for ${d} damage!`);}
+   else log(`${player.name}'s Heavy Strike misses!`);
+ } else if(type===2){
+   if(player.energy<30)return;
+   player.energy-=30;
+   if(player.core.skill==="Moon Mend"){let heal=Math.round(player.maxHp*.22+player.stats.mag);player.hp=Math.min(player.maxHp,player.hp+heal);player.energy=Math.min(100,player.energy+10);log(`${player.name} uses Moon Mend and restores ${heal} HP.`);}
+   else {let mult=player.talent.effect==="overcharge"?2.0:1.65;let d=damageAgainst(player,enemy,Math.round(player.stats.mag*mult+player.stats.str*.35+Math.random()*5),"magic");enemy.hp=Math.max(0,enemy.hp-d);if(player.core.skill==="Void Pulse"){enemy.energy=Math.max(0,enemy.energy-15);player.hp=Math.min(player.maxHp,player.hp+Math.round(d*.15));}log(`${player.name} unleashes ${player.core.skill} for ${d} damage!`);}
+ } else {player.guarding=true;player.energy=Math.min(100,player.energy+18);log(`${player.name} guards, reducing the next hit and recovering energy.`);}
+ if(enemy.hp<=0){finishBattle(true);return;}
+ enemyTurn();
+ if(player.hp<=0){finishBattle(false);return;}
+ renderAll();
+}
+function enemyTurn(){
+ if(enemy.talent.effect==="regen")enemy.hp=Math.min(enemy.maxHp,enemy.hp+5);
+ let choice;
+ if(enemy.hp<enemy.maxHp*.32&&enemy.core.skill==="Moon Mend"&&enemy.energy>=30)choice=2;
+ else if(enemy.energy>=30&&Math.random()<.28)choice=2;
+ else if(Math.random()<.24)choice=1;
+ else if(Math.random()<.17)choice=3;
+ else choice=0;
+ enemy.guarding=false;
+ if(choice===3){enemy.guarding=true;enemy.energy=Math.min(100,enemy.energy+18);log(`${enemy.name} raises a guard.`);return;}
+ if(choice===2&&enemy.energy>=30){
+  enemy.energy-=30;
+  if(enemy.core.skill==="Moon Mend"){let h=Math.round(enemy.maxHp*.2+enemy.stats.mag);enemy.hp=Math.min(enemy.maxHp,enemy.hp+h);log(`${enemy.name} uses Moon Mend and repairs ${h} HP.`);}
+  else {let d=damageAgainst(enemy,player,Math.round(enemy.stats.mag*1.6+enemy.stats.str*.3),"magic");player.hp=Math.max(0,player.hp-d);if(enemy.core.skill==="Void Pulse")player.energy=Math.max(0,player.energy-10);log(`${enemy.name} uses ${enemy.core.skill} for ${d} damage!`);}
+ } else if(choice===1){
+  if(Math.random()<.68){let d=damageAgainst(enemy,player,Math.round(enemy.stats.str*1.35),"heavy");player.hp=Math.max(0,player.hp-d);log(`${enemy.name} lands a Heavy Strike for ${d} damage!`);}else log(`${enemy.name}'s Heavy Strike misses.`);
+ } else {
+  let d=damageAgainst(enemy,player,enemy.stats.str+Math.floor(Math.random()*6),"physical");player.hp=Math.max(0,player.hp-d);log(`${enemy.name} attacks for ${d} damage.`);
+ }
+}
+function finishBattle(won){
+ battleOver=true;
+ if(won){wins++;let gained=25+enemy.level*10;xp+=gained;player.xp=(player.xp||0)+gained;log(`🏆 Victory! You earn ${gained} XP.`);while(xp>=level*50){xp-=level*50;level++;log(`✨ LEVEL UP! Your forge mastery is now level ${level}. New golems will be stronger.`);}player.level=level;}
+ else {losses++;log(`💥 Defeat. Your golem needs repairs. Rest before the next fight.`);}
+ $("battleState").textContent=won?"Victory!":"Defeat";renderAll();
+}
+function saveCurrent(){
+ if(!player){alert("Forge a golem first.");return;}
+ const saved=cloneGolem(player);collection.unshift(saved);collection=collection.slice(0,20);
+ localStorage.setItem("golemForgeCollection",JSON.stringify(collection));
+ localStorage.setItem("golemForgeProgress",JSON.stringify({wins,losses,xp,level}));
+ renderCollection();log(`${player.name} has been saved to your collection.`);
+}
+function loadFromCollection(i){player=cloneGolem(collection[i]);player.hp=player.maxHp;player.energy=100;startNewBattle();log(`${player.name} returns from your collection, repaired and ready.`);}
+function loadSaved(){
+ const c=JSON.parse(localStorage.getItem("golemForgeCollection")||"[]");
+ const p=JSON.parse(localStorage.getItem("golemForgeProgress")||"null");
+ if(p){wins=p.wins||0;losses=p.losses||0;xp=p.xp||0;level=p.level||1;}
+ collection=c;
+ if(c.length){player=cloneGolem(c[0]);player.hp=player.maxHp;player.energy=100;startNewBattle();log("Saved golem loaded and repaired.");}
+ else {alert("No saved golem found in this browser yet.");renderAll();}
+}
+function renderLore(){
+ const m=player.material,c=player.core,t=player.temper;
+ $("loreBox").innerHTML=`<p><b>${player.name}</b> was shaped from ${m.name.toLowerCase()} and awakened by a ${c.name.toLowerCase()}.</p><p class="muted">${m.desc} This ${t.name.toLowerCase()} construct ${t.behavior}. Its core channels ${c.type} magic, while its ${player.talent.name.toLowerCase()} talent gives it a distinct edge in battle.</p>`;
+}
+$("generateBtn").onclick=()=>{player=generateGolem();startNewBattle();renderLore();};
+$("enemyBtn").onclick=()=>startNewBattle();
+$("saveBtn").onclick=saveCurrent;
+$("loadBtn").onclick=loadSaved;
+$("healBtn").onclick=()=>{if(!player){alert("Forge a golem first.");return;}if(!battleOver&&enemy&&enemy.hp>0){alert("Finish the current battle before resting.");return;}player.hp=player.maxHp;player.energy=100;player.guarding=false;log(`${player.name} has been fully repaired.`);renderAll();};
+window.loadFromCollection=loadFromCollection;
+collection=JSON.parse(localStorage.getItem("golemForgeCollection")||"[]");
+const prog=JSON.parse(localStorage.getItem("golemForgeProgress")||"null");
+if(prog){wins=prog.wins||0;losses=prog.losses||0;xp=prog.xp||0;level=prog.level||1;}
+player=generateGolem(); enemy=generateGolem(); battleOver=false;
+renderAll();renderLore();
+resetLog("A new construct awakens. Choose Attack, Heavy Strike, Core Skill, or Guard to take your first turn.");
+</script>
+</body>
+</html>
